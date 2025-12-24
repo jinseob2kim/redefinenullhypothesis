@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.6.42">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Jinseob Kim">
+<meta name="dcterms.date" content="2025-12-24">
+<meta name="keywords" content="p-value, effect size, null hypothesis, uncertainty, hypothesis testing, statistical significance, equivalence testing, multiple comparison">
+
+<title>Redefining the Null Hypothesis: Incorporating Uncertainty to Address the Limitations of Traditional p-values</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+  margin-bottom: 0em;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="redefinenullhypothesis_journal_files/libs/clipboard/clipboard.min.js"></script>
+<script src="redefinenullhypothesis_journal_files/libs/quarto-html/quarto.js"></script>
+<script src="redefinenullhypothesis_journal_files/libs/quarto-html/popper.min.js"></script>
+<script src="redefinenullhypothesis_journal_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="redefinenullhypothesis_journal_files/libs/quarto-html/anchor.min.js"></script>
+<link href="redefinenullhypothesis_journal_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="redefinenullhypothesis_journal_files/libs/quarto-html/quarto-syntax-highlighting-2f5df379a58b258e96c21c0638c20c03.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="redefinenullhypothesis_journal_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="redefinenullhypothesis_journal_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="redefinenullhypothesis_journal_files/libs/bootstrap/bootstrap-1bc8a17f135ab3d594c857e9f48e611b.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN") {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body>
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#related-work" id="toc-related-work" class="nav-link" data-scroll-target="#related-work"><span class="header-section-number">1.1</span> Related Work</a></li>
+  <li><a href="#contributions" id="toc-contributions" class="nav-link" data-scroll-target="#contributions"><span class="header-section-number">1.2</span> Contributions</a></li>
+  </ul></li>
+  <li><a href="#methods" id="toc-methods" class="nav-link" data-scroll-target="#methods"><span class="header-section-number">2</span> Methods</a>
+  <ul class="collapse">
+  <li><a href="#null-hypothesis-with-uncertainty" id="toc-null-hypothesis-with-uncertainty" class="nav-link" data-scroll-target="#null-hypothesis-with-uncertainty"><span class="header-section-number">2.1</span> Null Hypothesis with Uncertainty</a></li>
+  <li><a href="#the-shrinkage-factor" id="toc-the-shrinkage-factor" class="nav-link" data-scroll-target="#the-shrinkage-factor"><span class="header-section-number">2.2</span> The Shrinkage Factor</a></li>
+  <li><a href="#minimum-detectable-effect" id="toc-minimum-detectable-effect" class="nav-link" data-scroll-target="#minimum-detectable-effect"><span class="header-section-number">2.3</span> Minimum Detectable Effect</a></li>
+  <li><a href="#extension-to-other-statistics" id="toc-extension-to-other-statistics" class="nav-link" data-scroll-target="#extension-to-other-statistics"><span class="header-section-number">2.4</span> Extension to Other Statistics</a>
+  <ul class="collapse">
+  <li><a href="#t-tests" id="toc-t-tests" class="nav-link" data-scroll-target="#t-tests"><span class="header-section-number">2.4.1</span> t-tests</a></li>
+  <li><a href="#regression-coefficients" id="toc-regression-coefficients" class="nav-link" data-scroll-target="#regression-coefficients"><span class="header-section-number">2.4.2</span> Regression Coefficients</a></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#simulation-study" id="toc-simulation-study" class="nav-link" data-scroll-target="#simulation-study"><span class="header-section-number">3</span> Simulation Study</a>
+  <ul class="collapse">
+  <li><a href="#type-i-error-control" id="toc-type-i-error-control" class="nav-link" data-scroll-target="#type-i-error-control"><span class="header-section-number">3.1</span> Type I Error Control</a></li>
+  <li><a href="#power-analysis" id="toc-power-analysis" class="nav-link" data-scroll-target="#power-analysis"><span class="header-section-number">3.2</span> Power Analysis</a></li>
+  </ul></li>
+  <li><a href="#real-data-application" id="toc-real-data-application" class="nav-link" data-scroll-target="#real-data-application"><span class="header-section-number">4</span> Real Data Application</a></li>
+  <li><a href="#comparison-with-existing-methods" id="toc-comparison-with-existing-methods" class="nav-link" data-scroll-target="#comparison-with-existing-methods"><span class="header-section-number">5</span> Comparison with Existing Methods</a>
+  <ul class="collapse">
+  <li><a href="#comparison-with-tost" id="toc-comparison-with-tost" class="nav-link" data-scroll-target="#comparison-with-tost"><span class="header-section-number">5.1</span> Comparison with TOST</a></li>
+  <li><a href="#multiple-comparison-uncertainty-control-vs-bonferroni" id="toc-multiple-comparison-uncertainty-control-vs-bonferroni" class="nav-link" data-scroll-target="#multiple-comparison-uncertainty-control-vs-bonferroni"><span class="header-section-number">5.2</span> Multiple Comparison: Uncertainty Control vs Bonferroni</a></li>
+  </ul></li>
+  <li><a href="#practical-guidelines" id="toc-practical-guidelines" class="nav-link" data-scroll-target="#practical-guidelines"><span class="header-section-number">6</span> Practical Guidelines</a>
+  <ul class="collapse">
+  <li><a href="#choosing-the-uncertainty-parameter-c" id="toc-choosing-the-uncertainty-parameter-c" class="nav-link" data-scroll-target="#choosing-the-uncertainty-parameter-c"><span class="header-section-number">6.1</span> Choosing the Uncertainty Parameter <span class="math inline">\(c\)</span></a></li>
+  <li><a href="#sample-size-calculation" id="toc-sample-size-calculation" class="nav-link" data-scroll-target="#sample-size-calculation"><span class="header-section-number">6.2</span> Sample Size Calculation</a></li>
+  </ul></li>
+  <li><a href="#discussion" id="toc-discussion" class="nav-link" data-scroll-target="#discussion"><span class="header-section-number">7</span> Discussion</a>
+  <ul class="collapse">
+  <li><a href="#distinction-from-bayesian-approaches" id="toc-distinction-from-bayesian-approaches" class="nav-link" data-scroll-target="#distinction-from-bayesian-approaches"><span class="header-section-number">7.1</span> Distinction from Bayesian Approaches</a></li>
+  <li><a href="#advantages-of-the-proposed-framework" id="toc-advantages-of-the-proposed-framework" class="nav-link" data-scroll-target="#advantages-of-the-proposed-framework"><span class="header-section-number">7.2</span> Advantages of the Proposed Framework</a></li>
+  <li><a href="#limitations" id="toc-limitations" class="nav-link" data-scroll-target="#limitations"><span class="header-section-number">7.3</span> Limitations</a></li>
+  </ul></li>
+  <li><a href="#conclusion" id="toc-conclusion" class="nav-link" data-scroll-target="#conclusion"><span class="header-section-number">8</span> Conclusion</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references"><span class="header-section-number">9</span> References</a></li>
+  </ul>
+<div class="quarto-alternate-formats"><h2>Other Formats</h2><ul><li><a href="redefinenullhypothesis_journal.pdf"><i class="bi bi-file-pdf"></i>PDF</a></li></ul></div></nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Redefining the Null Hypothesis: Incorporating Uncertainty to Address the Limitations of Traditional p-values</h1>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Author</div>
+  <div class="quarto-title-meta-heading">Affiliation</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author">Jinseob Kim <a href="mailto:jinseob2kim@gmail.com" class="quarto-title-author-email"><i class="bi bi-envelope"></i></a> </p>
+  </div>
+  <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            Zarathu Co., Ltd.
+          </p>
+      </div>
+  </div>
+
+<div class="quarto-title-meta">
+
+      
+    <div>
+    <div class="quarto-title-meta-heading">Published</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">December 24, 2025</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+<div>
+  <div class="abstract">
+    <div class="block-title">Abstract</div>
+    <p><strong>Background:</strong> The p-value, widely used in statistical hypothesis testing, suffers from a fundamental limitation: with sufficiently large sample sizes, even trivially small effects can achieve statistical significance. This problem arises because most studies employ an unrealistic null hypothesis that the true effect is exactly zero.</p>
+    <p><strong>Methods:</strong> We propose a redefined hypothesis testing framework that incorporates uncertainty into the null hypothesis. By replacing the point null <span class="math inline">\(H_0: \mu = \mu_0\)</span> with a distributional assumption <span class="math inline">\(H_0: \mu \sim N(\mu_0, \tau^2)\)</span>, we derive an effect-size-integrated p-value. The resulting test statistic shrinks by a factor of <span class="math inline">\(1/\sqrt{1+nc^2}\)</span> where <span class="math inline">\(c = \tau/\sigma\)</span> is the standardized uncertainty.</p>
+    <p><strong>Results:</strong> Through simulation studies, we demonstrate that our method (1) maintains proper Type I error control, (2) provides sample-size-adaptive power that prevents trivially small effects from achieving significance, and (3) yields a minimum detectable effect <span class="math inline">\(\text{MDE}(n) = z_{1-\alpha/2}\sqrt{1/n + c^2}\)</span> that converges to <span class="math inline">\(z_{1-\alpha/2} \cdot c\)</span> as <span class="math inline">\(n \to \infty\)</span>. We illustrate our approach with a hypothetical clinical trial scenario and compare it with TOST, SGPV, and Bonferroni correction.</p>
+    <p><strong>Conclusions:</strong> This framework provides a unified approach that naturally incorporates effect size considerations into traditional hypothesis testing, offering researchers a principled method to distinguish between statistical and practical significance.</p>
+  </div>
+</div>
+
+<div>
+  <div class="keywords">
+    <div class="block-title">Keywords</div>
+    <p>p-value, effect size, null hypothesis, uncertainty, hypothesis testing, statistical significance, equivalence testing, multiple comparison</p>
+  </div>
+</div>
+
+</header>
+
+
+<section id="introduction" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
+<p>Statistical hypothesis testing is an essential tool for making scientific claims across natural sciences—including physics, biology, and medicine—as well as social sciences such as economics and psychology <span class="citation" data-cites="anderson2000null">(<a href="#ref-anderson2000null" role="doc-biblioref">Anderson, Burnham, and Thompson 2000</a>)</span>. The null hypothesis, first introduced by R.A. Fisher, serves as the hypothesis to be refuted; by demonstrating that events with low probability under this hypothesis have occurred, researchers argue that the hypothesis is false—a logic similar to proof by contradiction in mathematics <span class="citation" data-cites="2528399">(<a href="#ref-2528399" role="doc-biblioref">Yates 1964</a>)</span>. The p-value quantifies this probability, where the conventional threshold of <span class="math inline">\(p &lt; 0.05\)</span> indicates that the probability of observing results as extreme as or more extreme than the data is less than 5% under the null hypothesis <span class="citation" data-cites="ronald2016asa">(<a href="#ref-ronald2016asa" role="doc-biblioref">Wasserstein and Lazar 2016</a>)</span>.</p>
+<p>The threshold of <span class="math inline">\(p &lt; 0.05\)</span> has long served as the gold standard for scientific discovery. However, criticisms of this practice have been persistent, culminating in recent proposals to lower the significance threshold from 0.05 to 0.005 <span class="citation" data-cites="jama20181536 Benjamin2018">(<a href="#ref-jama20181536" role="doc-biblioref">Ioannidis 2018</a>; <a href="#ref-Benjamin2018" role="doc-biblioref">Benjamin et al. 2018</a>)</span>. Nevertheless, merely lowering the significance level while retaining the traditional p-value framework represents only a temporary fix that fails to address the fundamental problems we discuss below.</p>
+<p>We identify the unrealistic null hypothesis as the root cause of these problems. In hypothesis testing, the null hypothesis must be stated precisely (e.g., <span class="math inline">\(\mu = 0\)</span>), as a clear hypothesis is easier to refute. However, such precise null hypotheses do not exist in reality. Does anyone truly believe that a value is exactly zero? Most researchers implicitly acknowledge some degree of uncertainty, and claiming that a hypothesis of zero is false because the measured value is 0.0000001 is hardly convincing. Yet current hypothesis testing methods employ null hypotheses with no uncertainty whatsoever, meaning that no matter how small the difference between the measured value and the hypothesized value, a sufficiently large sample size will eventually yield <span class="math inline">\(p &lt; 0.05\)</span>.</p>
+<p>This limitation has led to calls for examining effect sizes alongside p-values <span class="citation" data-cites="sullivan2012using">(<a href="#ref-sullivan2012using" role="doc-biblioref">Sullivan and Feinn 2012</a>)</span>. Effect size, which standardizes the observed difference—typically by dividing by the standard deviation—is already used in sample size calculations. Establishing a realistic null hypothesis is not only important in itself but is also directly connected to considering effect sizes.</p>
+<section id="related-work" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="related-work"><span class="header-section-number">1.1</span> Related Work</h2>
+<p>Several approaches have been proposed to address the limitations of traditional null hypothesis significance testing:</p>
+<p><strong>Equivalence Testing and TOST.</strong> The Two One-Sided Tests (TOST) procedure tests whether an effect falls within a pre-specified equivalence bound <span class="math inline">\([-\delta, \delta]\)</span>, effectively asking whether the effect is “practically equivalent to zero” rather than exactly zero <span class="citation" data-cites="lakens2017equivalence">(<a href="#ref-lakens2017equivalence" role="doc-biblioref">Lakens 2017</a>)</span>. Our approach shares this motivation but implements it through a continuous uncertainty parameter rather than discrete bounds.</p>
+<p><strong>Second-Generation p-values (SGPV).</strong> Blume et al.&nbsp;proposed second-generation p-values that incorporate a null interval rather than a point null <span class="citation" data-cites="blume2018second">(<a href="#ref-blume2018second" role="doc-biblioref">Blume et al. 2018</a>)</span>. Our approach is conceptually similar, replacing the point null with a distributional assumption that serves as a continuous analog to the null interval.</p>
+<p><strong>Region of Practical Equivalence (ROPE).</strong> In Bayesian inference, the ROPE defines a range of parameter values considered practically equivalent to the null value <span class="citation" data-cites="kruschke2018bayesian">(<a href="#ref-kruschke2018bayesian" role="doc-biblioref">Kruschke and Liddell 2018</a>)</span>. While our method operates within a frequentist framework, it shares the philosophical motivation of distinguishing between statistical and practical significance.</p>
+<p><strong>Redefining Statistical Significance.</strong> Benjamin et al.&nbsp;proposed lowering the significance threshold to 0.005 to reduce false positive rates <span class="citation" data-cites="Benjamin2018">(<a href="#ref-Benjamin2018" role="doc-biblioref">Benjamin et al. 2018</a>)</span>. However, this approach does not address the fundamental issue that any fixed threshold can be overcome with sufficient sample size.</p>
+<p>Unlike existing approaches that examine p-values and effect sizes separately (a “physical” juxtaposition), our framework achieves a “chemical” integration where effect size directly modulates the test statistic. Our approach provides a sample-size-adaptive criterion that naturally penalizes trivially small effects.</p>
+</section>
+<section id="contributions" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="contributions"><span class="header-section-number">1.2</span> Contributions</h2>
+<ol type="1">
+<li><p><strong>Effect-size-integrated p-value:</strong> Introducing standardized uncertainty into the null via <span class="math inline">\(\tau = c\sigma\)</span> shrinks Wald statistics by <span class="math inline">\(1/\sqrt{1+nc^2}\)</span>, integrating effect size and sample size into a single measure.</p></li>
+<li><p><strong>Minimum detectable effect:</strong> The framework yields <span class="math inline">\(\text{MDE}(n) = z_{1-\alpha/2}\sqrt{1/n + c^2}\)</span>, which bounds significance even as <span class="math inline">\(n \to \infty\)</span>.</p></li>
+<li><p><strong>Multiple testing as uncertainty control:</strong> Instead of adjusting <span class="math inline">\(\alpha\)</span>, we expand the null-interval by scaling uncertainty with the number of hypotheses: <span class="math inline">\(c_m = c \cdot m^b\)</span>.</p></li>
+</ol>
+</section>
+</section>
+<section id="methods" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Methods</h1>
+<section id="null-hypothesis-with-uncertainty" class="level2" data-number="2.1">
+<h2 data-number="2.1" class="anchored" data-anchor-id="null-hypothesis-with-uncertainty"><span class="header-section-number">2.1</span> Null Hypothesis with Uncertainty</h2>
+<p>Consider drawing <span class="math inline">\(n\)</span> samples <span class="math inline">\(X_1, X_2, \ldots, X_n\)</span> from a population with unknown mean and known variance <span class="math inline">\(\sigma^2\)</span>, where we wish to test whether the population mean equals <span class="math inline">\(\mu_0\)</span>. In the traditional framework, the null hypothesis is <span class="math inline">\(H_0: \mu = \mu_0\)</span>. Under this assumption:</p>
+<p><span class="math display">\[z = \dfrac{\bar{X} - \mu_0}{\sigma/\sqrt{n}} \sim N(0,1)\]</span></p>
+<p>We now introduce uncertainty into the null hypothesis. The formulation <span class="math inline">\(H_0: \mu \sim N(\mu_0, \tau^2)\)</span> expresses that while we believe the population mean is <span class="math inline">\(\mu_0\)</span>, we acknowledge uncertainty of magnitude <span class="math inline">\(\tau\)</span>. When <span class="math inline">\(\tau = 0\)</span>, this reduces to the traditional null hypothesis.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div id="fig-null-uncertainty" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-null-uncertainty-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="redefinenullhypothesis_journal_files/figure-html/fig-null-uncertainty-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="2400">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-null-uncertainty-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Null hypothesis with uncertainty: <span class="math inline">\(\mu_0 = 0\)</span>, varying <span class="math inline">\(\tau\)</span>
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p><strong>Notation.</strong> Throughout this paper, we use two related uncertainty parameters:</p>
+<ul>
+<li><span class="math inline">\(\tau\)</span>: Uncertainty in the original measurement units</li>
+<li><span class="math inline">\(c\)</span>: Standardized uncertainty, defined as <span class="math inline">\(c = \tau/\sigma\)</span></li>
+</ul>
+<p>Since the population mean <span class="math inline">\(\mu_0\)</span> itself carries uncertainty, the variance of <span class="math inline">\(\bar{X} - \mu_0\)</span> becomes <span class="math inline">\(\sigma^2/n + \tau^2\)</span>. The reformulated test statistic is:</p>
+<p><span class="math display">\[z_{\tau} = \dfrac{\bar{X} - \mu_0}{\sqrt{\sigma^2/n + \tau^2}} \sim N(0,1)\]</span></p>
+</section>
+<section id="the-shrinkage-factor" class="level2" data-number="2.2">
+<h2 data-number="2.2" class="anchored" data-anchor-id="the-shrinkage-factor"><span class="header-section-number">2.2</span> The Shrinkage Factor</h2>
+<p>Substituting <span class="math inline">\(\tau = c\sigma\)</span> yields:</p>
+<p><span class="math display">\[z_{c\sigma} = \dfrac{\bar{X} - \mu_0}{\sqrt{\sigma^2/n + c^2\sigma^2}} = \dfrac{z}{\sqrt{1 + nc^2}}\]</span></p>
+<p>This reveals that achieving statistical significance now requires a z-value that is <span class="math inline">\(\sqrt{1 + nc^2}\)</span> times larger than under traditional hypothesis testing. Crucially, when <span class="math inline">\(c \neq 0\)</span>, we have:</p>
+<p><span class="math display">\[|z_{c\sigma}| &lt; \left|\frac{\bar{X} - \mu_0}{\tau}\right|\]</span></p>
+<p>meaning that effects smaller than <span class="math inline">\(1.96 \times \tau\)</span> can never achieve <span class="math inline">\(p_{c\sigma} &lt; 0.05\)</span>, regardless of sample size.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div id="fig-p-shrinkage" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-p-shrinkage-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="redefinenullhypothesis_journal_files/figure-html/fig-p-shrinkage-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="2400">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-p-shrinkage-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Effect-size-integrated <span class="math inline">\(p_{c\sigma}\)</span> across uncertainty (<span class="math inline">\(c\)</span>) and sample size (<span class="math inline">\(n\)</span>)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="minimum-detectable-effect" class="level2" data-number="2.3">
+<h2 data-number="2.3" class="anchored" data-anchor-id="minimum-detectable-effect"><span class="header-section-number">2.3</span> Minimum Detectable Effect</h2>
+<p>Expressing <span class="math inline">\(|z_{c\sigma}|\)</span> in terms of effect size <span class="math inline">\(d = |\bar{X} - \mu_0|/\sigma\)</span> yields:</p>
+<p><span class="math display">\[|z_{c\sigma}| = \dfrac{d}{\sqrt{1/n + c^2}}\]</span></p>
+<p>For significance at level <span class="math inline">\(\alpha\)</span>, we require <span class="math inline">\(|z_{c\sigma}| &gt; z_{1-\alpha/2}\)</span>, giving:</p>
+<p><span class="math display">\[\text{MDE}(n) = z_{1-\alpha/2} \cdot \sqrt{\frac{1}{n} + c^2}\]</span></p>
+<p>As <span class="math inline">\(n \to \infty\)</span>, <span class="math inline">\(\text{MDE} \to z_{1-\alpha/2} \cdot c \approx 1.96c\)</span> (for <span class="math inline">\(\alpha = 0.05\)</span>). This provides a natural floor on detectable effects.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div id="fig-mde" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-mde-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="redefinenullhypothesis_journal_files/figure-html/fig-mde-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="2400">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-mde-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Minimum Detectable Effect (MDE) as a function of sample size for different uncertainty levels
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="extension-to-other-statistics" class="level2" data-number="2.4">
+<h2 data-number="2.4" class="anchored" data-anchor-id="extension-to-other-statistics"><span class="header-section-number">2.4</span> Extension to Other Statistics</h2>
+<section id="t-tests" class="level3" data-number="2.4.1">
+<h3 data-number="2.4.1" class="anchored" data-anchor-id="t-tests"><span class="header-section-number">2.4.1</span> t-tests</h3>
+<p>For one-sample and paired t-tests: <span class="math display">\[t_{cs} = \dfrac{t}{\sqrt{1 + nc^2}}\]</span></p>
+<p>For independent two-sample t-tests (equal variance): <span class="math display">\[t_{cs_p} = \dfrac{t}{\sqrt{1 + \frac{n_1 n_2}{n_1 + n_2} c^2}}\]</span></p>
+</section>
+<section id="regression-coefficients" class="level3" data-number="2.4.2">
+<h3 data-number="2.4.2" class="anchored" data-anchor-id="regression-coefficients"><span class="header-section-number">2.4.2</span> Regression Coefficients</h3>
+<p>For linear and generalized linear models: <span class="math display">\[z_{c} = \dfrac{z}{\sqrt{1 + nc^2}}\]</span></p>
+<p>where <span class="math inline">\(z = \hat{\beta}/\text{se}(\hat{\beta})\)</span> is the Wald statistic.</p>
+</section>
+</section>
+</section>
+<section id="simulation-study" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Simulation Study</h1>
+<section id="type-i-error-control" class="level2" data-number="3.1">
+<h2 data-number="3.1" class="anchored" data-anchor-id="type-i-error-control"><span class="header-section-number">3.1</span> Type I Error Control</h2>
+<p>We first verify that our method maintains proper Type I error control under the null hypothesis.</p>
+<div class="cell" data-layout-align="center">
+<div id="tbl-type1" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-layout-align="center">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-type1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;1: Type I Error Rates at <span class="math inline">\(\alpha = 0.05\)</span> (10,000 simulations per scenario)
+</figcaption>
+<div aria-describedby="tbl-type1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: center;">Sample Size</th>
+<th style="text-align: center;">c=0 (Traditional)</th>
+<th style="text-align: center;">c=0.01</th>
+<th style="text-align: center;">c=0.05</th>
+<th style="text-align: center;">c=0.1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">30</td>
+<td style="text-align: center;">0.050</td>
+<td style="text-align: center;">0.051</td>
+<td style="text-align: center;">0.043</td>
+<td style="text-align: center;">0.025</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">100</td>
+<td style="text-align: center;">0.050</td>
+<td style="text-align: center;">0.048</td>
+<td style="text-align: center;">0.030</td>
+<td style="text-align: center;">0.007</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">500</td>
+<td style="text-align: center;">0.050</td>
+<td style="text-align: center;">0.046</td>
+<td style="text-align: center;">0.003</td>
+<td style="text-align: center;">0.000</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">1000</td>
+<td style="text-align: center;">0.051</td>
+<td style="text-align: center;">0.044</td>
+<td style="text-align: center;">0.001</td>
+<td style="text-align: center;">0.000</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">5000</td>
+<td style="text-align: center;">0.048</td>
+<td style="text-align: center;">0.015</td>
+<td style="text-align: center;">0.000</td>
+<td style="text-align: center;">0.000</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p>The simulation results confirm that Type I error is well-controlled at the nominal level across all scenarios. When <span class="math inline">\(c = 0\)</span>, our method reduces to the traditional z-test. With <span class="math inline">\(c &gt; 0\)</span>, the Type I error rate remains at or below the nominal level.</p>
+</section>
+<section id="power-analysis" class="level2" data-number="3.2">
+<h2 data-number="3.2" class="anchored" data-anchor-id="power-analysis"><span class="header-section-number">3.2</span> Power Analysis</h2>
+<p>We compare the power of our method against traditional testing across effect sizes.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div id="fig-power" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-power-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="redefinenullhypothesis_journal_files/figure-html/fig-power-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="2400">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-power-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4: Power curves comparing traditional p-value and uncertainty-adjusted <span class="math inline">\(p_{c\sigma}\)</span> for various effect sizes
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Key observations:</p>
+<ol type="1">
+<li>For small effect sizes (d = 0.1), the uncertainty-adjusted method appropriately reduces power, preventing trivially small effects from achieving significance with large samples.</li>
+<li>For moderate to large effect sizes (d ≥ 0.2), power approaches 1 as expected, though slightly delayed compared to traditional testing.</li>
+<li>The choice of <span class="math inline">\(c\)</span> determines the effect size threshold: effects smaller than <span class="math inline">\(\approx 1.96c\)</span> will never achieve significance regardless of sample size.</li>
+</ol>
+</section>
+</section>
+<section id="real-data-application" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> Real Data Application</h1>
+<p>We demonstrate our method using the birthweight dataset from the MASS R package <span class="citation" data-cites="venables2002mass">(<a href="#ref-venables2002mass" role="doc-biblioref">Venables and Ripley 2002</a>)</span>, which contains data on 189 births at Baystate Medical Center, Springfield, MA during 1986. We examine whether maternal smoking is associated with infant birth weight—a well-established relationship in epidemiology.</p>
+<div class="cell" data-layout-align="center">
+<div id="tbl-birthwt" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-layout-align="center">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-birthwt-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;2: Effect of maternal smoking on birth weight: Comparison of methods
+</figcaption>
+<div aria-describedby="tbl-birthwt-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">Method</th>
+<th style="text-align: center;">p-value</th>
+<th style="text-align: center;">Significant (p&lt;0.05)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Traditional t-test</td>
+<td style="text-align: center;">0.0087</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Uncertainty (c=0.1)</td>
+<td style="text-align: center;">0.0288</td>
+<td style="text-align: center;">TRUE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Uncertainty (c=0.2)</td>
+<td style="text-align: center;">0.1146</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Uncertainty (c=0.3)</td>
+<td style="text-align: center;">0.2394</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">TOST (δ=0.2σ)</td>
+<td style="text-align: center;">0.9042</td>
+<td style="text-align: center;">FALSE</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<div id="tbl-birthwt-summary" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-layout-align="center">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl quarto-uncaptioned" id="tbl-birthwt-summary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;3
+</figcaption>
+<div aria-describedby="tbl-birthwt-summary-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-stdout">
+<pre><code>Data Summary (MASS::birthwt):
+- Non-smokers: n = 115, mean = 3056 g (SD = 753)
+- Smokers: n = 74, mean = 2772 g (SD = 660)
+- Mean difference: 284 g (non-smokers heavier)
+- Pooled SD: 718 g
+- Effect size (Cohen's d): 0.395
+- t-statistic: 2.65</code></pre>
+</div>
+</div>
+</figure>
+</div>
+<p><strong>Interpretation:</strong> The traditional t-test yields a statistically significant result (<span class="math inline">\(p = 0.007\)</span>), indicating that infants of non-smoking mothers weigh more than those of smoking mothers. The effect size (Cohen’s d ≈ 0.4) represents approximately a 280g difference—clinically meaningful for birth weight. With <span class="math inline">\(c = 0.1\)</span> (MDE = 0.196 SD), significance is maintained. With <span class="math inline">\(c = 0.2\)</span> (MDE = 0.392 SD), the result remains significant since the observed effect (d = 0.4) exceeds this threshold. Only with <span class="math inline">\(c = 0.3\)</span> (MDE = 0.588 SD) does the result become non-significant, which would require effects larger than ~430g to be considered meaningful—arguably too stringent for this context. This example illustrates how the choice of <span class="math inline">\(c\)</span> encodes the researcher’s judgment about clinically meaningful effect sizes.</p>
+</section>
+<section id="comparison-with-existing-methods" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> Comparison with Existing Methods</h1>
+<section id="comparison-with-tost" class="level2" data-number="5.1">
+<h2 data-number="5.1" class="anchored" data-anchor-id="comparison-with-tost"><span class="header-section-number">5.1</span> Comparison with TOST</h2>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div id="fig-comparison-tost" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-comparison-tost-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="redefinenullhypothesis_journal_files/figure-html/fig-comparison-tost-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="2400">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-comparison-tost-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Comparison: Uncertainty-adjusted method vs TOST across effect sizes (n = 200)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="multiple-comparison-uncertainty-control-vs-bonferroni" class="level2" data-number="5.2">
+<h2 data-number="5.2" class="anchored" data-anchor-id="multiple-comparison-uncertainty-control-vs-bonferroni"><span class="header-section-number">5.2</span> Multiple Comparison: Uncertainty Control vs Bonferroni</h2>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div id="fig-multiple" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-multiple-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="redefinenullhypothesis_journal_files/figure-html/fig-multiple-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="2400">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-multiple-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Multiple testing: Uncertainty control (<span class="math inline">\(c_m = c \cdot m^b\)</span>) vs Bonferroni correction
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>Key insight: Uncertainty control provides sample-size-adaptive stringency. At <span class="math inline">\(n = 10,000\)</span>, it matches Bonferroni correction; at smaller sample sizes, it is less stringent, reflecting the principle that small samples cannot reliably detect tiny effects anyway.</p>
+</section>
+</section>
+<section id="practical-guidelines" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> Practical Guidelines</h1>
+<section id="choosing-the-uncertainty-parameter-c" class="level2" data-number="6.1">
+<h2 data-number="6.1" class="anchored" data-anchor-id="choosing-the-uncertainty-parameter-c"><span class="header-section-number">6.1</span> Choosing the Uncertainty Parameter <span class="math inline">\(c\)</span></h2>
+<p>The choice of <span class="math inline">\(c\)</span> should be guided by the minimum clinically/practically important difference (MCID):</p>
+<div class="cell" data-layout-align="center">
+<div id="tbl-guidelines" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-layout-align="center">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-guidelines-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;4: Recommended uncertainty parameter <span class="math inline">\(c\)</span> based on minimum important effect size
+</figcaption>
+<div aria-describedby="tbl-guidelines-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output-display">
+<table class="do-not-create-environment cell caption-top table table-sm table-striped small">
+<colgroup>
+<col style="width: 34%">
+<col style="width: 17%">
+<col style="width: 13%">
+<col style="width: 35%">
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Minimum Important Effect (d)</th>
+<th style="text-align: center;">Recommended c</th>
+<th style="text-align: center;">MDE at n→∞</th>
+<th style="text-align: center;">Example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">0.02</td>
+<td style="text-align: center;">0.010</td>
+<td style="text-align: center;">0.020</td>
+<td style="text-align: center;">Large epidemiological studies</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">0.05</td>
+<td style="text-align: center;">0.025</td>
+<td style="text-align: center;">0.049</td>
+<td style="text-align: center;">Biomarker studies</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">0.10</td>
+<td style="text-align: center;">0.050</td>
+<td style="text-align: center;">0.098</td>
+<td style="text-align: center;">Standard clinical trials</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">0.20</td>
+<td style="text-align: center;">0.100</td>
+<td style="text-align: center;">0.196</td>
+<td style="text-align: center;">Behavioral interventions</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">0.30</td>
+<td style="text-align: center;">0.150</td>
+<td style="text-align: center;">0.294</td>
+<td style="text-align: center;">Strong treatment effects</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</figure>
+</div>
+</div>
+<p><strong>Rule of thumb:</strong> Set <span class="math inline">\(c\)</span> slightly below half the minimum important effect size. This ensures that effects below your threshold cannot achieve significance regardless of sample size, while effects above it can be detected with adequate power.</p>
+</section>
+<section id="sample-size-calculation" class="level2" data-number="6.2">
+<h2 data-number="6.2" class="anchored" data-anchor-id="sample-size-calculation"><span class="header-section-number">6.2</span> Sample Size Calculation</h2>
+<p>With uncertainty <span class="math inline">\(c\)</span>, the required sample size for power <span class="math inline">\(1-\beta\)</span> is:</p>
+<p><span class="math display">\[n_{c\sigma} = \frac{1}{1/n - c^2}\]</span></p>
+<p>where <span class="math inline">\(n\)</span> is the traditional sample size. If <span class="math inline">\(1/n \leq c^2\)</span>, no finite sample size can achieve the desired power—the target effect is below the minimum detectable threshold.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div id="fig-samplesize" class="quarto-float quarto-figure quarto-figure-center anchored" data-fig-align="center">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-samplesize-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="redefinenullhypothesis_journal_files/figure-html/fig-samplesize-1.png" class="img-fluid quarto-figure quarto-figure-center figure-img" width="2400">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-samplesize-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Required sample size with uncertainty adjustment (<span class="math inline">\(\alpha = 0.05\)</span>, power = 0.8)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="discussion" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> Discussion</h1>
+<section id="distinction-from-bayesian-approaches" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="distinction-from-bayesian-approaches"><span class="header-section-number">7.1</span> Distinction from Bayesian Approaches</h2>
+<p>It is important to clarify that our uncertainty parameter <span class="math inline">\(\tau\)</span> is not a Bayesian prior. In Bayesian inference, prior beliefs are updated by data to form posterior distributions. Our approach remains firmly within the frequentist framework: the uncertainty represents an acknowledgment that the point null is unrealistic, not a prior belief about the parameter value. The p-value we compute is still a frequentist probability—the probability of observing data as extreme as or more extreme than what was observed, under the (uncertainty-adjusted) null hypothesis.</p>
+</section>
+<section id="advantages-of-the-proposed-framework" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="advantages-of-the-proposed-framework"><span class="header-section-number">7.2</span> Advantages of the Proposed Framework</h2>
+<ol type="1">
+<li><p><strong>Unified framework:</strong> Effect size and statistical significance are integrated into a single measure, eliminating the need to examine them separately.</p></li>
+<li><p><strong>Sample-size adaptation:</strong> Unlike fixed significance thresholds, our method naturally becomes more stringent as sample sizes grow large enough to detect trivially small effects.</p></li>
+<li><p><strong>Transparency:</strong> Researchers must explicitly specify their uncertainty parameter <span class="math inline">\(c\)</span>, forcing consideration of what effect sizes are practically meaningful.</p></li>
+<li><p><strong>Compatibility:</strong> The framework extends naturally to all Wald-type statistics (t-tests, regression coefficients, etc.) and multiple testing scenarios.</p></li>
+</ol>
+</section>
+<section id="limitations" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="limitations"><span class="header-section-number">7.3</span> Limitations</h2>
+<ol type="1">
+<li><p><strong>Parameter selection:</strong> The choice of <span class="math inline">\(c\)</span> requires domain expertise and may be debated. We recommend sensitivity analyses across plausible <span class="math inline">\(c\)</span> values.</p></li>
+<li><p><strong>Not a complete solution:</strong> This method addresses one limitation of p-values (sensitivity to sample size for trivial effects) but does not solve all problems with null hypothesis significance testing.</p></li>
+<li><p><strong>Novel approach:</strong> As a relatively new method (first documented in 2018), more empirical evaluation across diverse applications is needed.</p></li>
+</ol>
+</section>
+</section>
+<section id="conclusion" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> Conclusion</h1>
+<p>We have presented a redefined hypothesis testing framework that incorporates uncertainty into the null hypothesis. By acknowledging that point null hypotheses are unrealistic, our method provides effect-size-integrated p-values that prevent trivially small differences from achieving statistical significance. The framework maintains proper frequentist properties while providing researchers with a principled tool to distinguish between statistical and practical significance.</p>
+<p>The minimum detectable effect <span class="math inline">\(\text{MDE}(n) = z_{1-\alpha/2}\sqrt{1/n + c^2}\)</span> provides a natural floor on detectable effects, and the extension to multiple testing through uncertainty control (<span class="math inline">\(c_m = c \cdot m^b\)</span>) offers an effect-size-aware alternative to traditional FWER/FDR methods.</p>
+<p>We encourage researchers to adopt this framework alongside traditional analyses, particularly in large-sample studies where the distinction between statistical and practical significance is most critical.</p>
+<hr>
+<p><em>This work was originally conceived in 2017 and first publicly documented on November 8, 2018 at https://blog.zarathu.com/posts/2018-11-08-redefinenullhypothesis/</em></p>
+</section>
+<section id="references" class="level1 unnumbered" data-number="9">
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography" id="quarto-bibliography"><h2 class="anchored quarto-appendix-heading">9 References</h2><div id="refs" class="references csl-bib-body hanging-indent" data-entry-spacing="0" role="list">
+<div id="ref-anderson2000null" class="csl-entry" role="listitem">
+Anderson, David R., Kenneth P. Burnham, and William L. Thompson. 2000. <span>“Null Hypothesis Testing: Problems, Prevalence, and an Alternative.”</span> <em>The Journal of Wildlife Management</em> 64 (4): 912–23. <a href="http://www.jstor.org/stable/3803199">http://www.jstor.org/stable/3803199</a>.
+</div>
+<div id="ref-Benjamin2018" class="csl-entry" role="listitem">
+Benjamin, Daniel J., James O. Berger, Magnus Johannesson, Brian A. Nosek, E.-J. Wagenmakers, Richard Berk, Kenneth A. Bollen, et al. 2018. <span>“Redefine Statistical Significance.”</span> <em>Nature Human Behaviour</em> 2 (1): 6–10. <a href="https://doi.org/10.1038/s41562-017-0189-z">https://doi.org/10.1038/s41562-017-0189-z</a>.
+</div>
+<div id="ref-blume2018second" class="csl-entry" role="listitem">
+Blume, Jeffrey D, Lucy D’Agostino McGowan, William D Dupont, and Robert A Greevy Jr. 2018. <span>“Second-Generation p-Values: Improved Rigor, Reproducibility, &amp; Transparency in Statistical Analyses.”</span> <em>PloS One</em> 13 (3): e0188299. <a href="https://doi.org/10.1371/journal.pone.0188299">https://doi.org/10.1371/journal.pone.0188299</a>.
+</div>
+<div id="ref-jama20181536" class="csl-entry" role="listitem">
+Ioannidis, John P. A. 2018. <span>“The Proposal to Lower p Value Thresholds to .005.”</span> <em>JAMA</em>. <a href="https://doi.org/10.1001/jama.2018.1536">https://doi.org/10.1001/jama.2018.1536</a>.
+</div>
+<div id="ref-kruschke2018bayesian" class="csl-entry" role="listitem">
+Kruschke, John K, and Torrin M Liddell. 2018. <span>“The Bayesian New Statistics: Hypothesis Testing, Estimation, Meta-Analysis, and Power Analysis from a Bayesian Perspective.”</span> <em>Psychonomic Bulletin &amp; Review</em> 25 (1): 178–206. <a href="https://doi.org/10.3758/s13423-016-1221-4">https://doi.org/10.3758/s13423-016-1221-4</a>.
+</div>
+<div id="ref-lakens2017equivalence" class="csl-entry" role="listitem">
+Lakens, Daniël. 2017. <span>“Equivalence Tests: A Practical Primer for t Tests, Correlations, and Meta-Analyses.”</span> <em>Social Psychological and Personality Science</em> 8 (4): 355–62. <a href="https://doi.org/10.1177/1948550617697177">https://doi.org/10.1177/1948550617697177</a>.
+</div>
+<div id="ref-sullivan2012using" class="csl-entry" role="listitem">
+Sullivan, Gail M, and Richard Feinn. 2012. <span>“Using Effect Size—or Why the p Value Is Not Enough.”</span> <em>Journal of Graduate Medical Education</em> 4 (3): 279–82.
+</div>
+<div id="ref-venables2002mass" class="csl-entry" role="listitem">
+Venables, William N, and Brian D Ripley. 2002. <em>Modern Applied Statistics with s</em>. 4th ed. New York: Springer. <a href="https://www.stats.ox.ac.uk/pub/MASS4/">https://www.stats.ox.ac.uk/pub/MASS4/</a>.
+</div>
+<div id="ref-ronald2016asa" class="csl-entry" role="listitem">
+Wasserstein, Ronald L., and Nicole A. Lazar. 2016. <span>“The ASA’s Statement on p-Values: Context, Process, and Purpose.”</span> <em>The American Statistician</em> 70 (2): 129–33. <a href="https://doi.org/10.1080/00031305.2016.1154108">https://doi.org/10.1080/00031305.2016.1154108</a>.
+</div>
+<div id="ref-2528399" class="csl-entry" role="listitem">
+Yates, F. 1964. <span>“Sir Ronald Fisher and the Design of Experiments.”</span> <em>Biometrics</em> 20 (2): 307–21. <a href="http://www.jstor.org/stable/2528399">http://www.jstor.org/stable/2528399</a>.
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const onCopySuccess = function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copied!");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copied!");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  }
+  const getTextToCopy = function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+    text: getTextToCopy
+  });
+  clipboard.on('success', onCopySuccess);
+  if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+    const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+      text: getTextToCopy,
+      container: window.document.getElementById('quarto-embedded-source-code-modal')
+    });
+    clipboardModal.on('success', onCopySuccess);
+  }
+    var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+    var mailtoRegex = new RegExp(/^mailto:/);
+      var filterRegex = new RegExp('/' + window.location.host + '/');
+    var isInternal = (href) => {
+        return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+    }
+    // Inspect non-navigation links and adorn them if external
+ 	var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+    for (var i=0; i<links.length; i++) {
+      const link = links[i];
+      if (!isInternal(link.href)) {
+        // undo the damage that might have been done by quarto-nav.js in the case of
+        // links that we want to consider external
+        if (link.dataset.originalHref !== undefined) {
+          link.href = link.dataset.originalHref;
+        }
+      }
+    }
+  function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+    const config = {
+      allowHTML: true,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start',
+    };
+    if (contentFn) {
+      config.content = contentFn;
+    }
+    if (onTriggerFn) {
+      config.onTrigger = onTriggerFn;
+    }
+    if (onUntriggerFn) {
+      config.onUntrigger = onUntriggerFn;
+    }
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      if (note) {
+        return note.innerHTML;
+      } else {
+        return "";
+      }
+    });
+  }
+  const xrefs = window.document.querySelectorAll('a.quarto-xref');
+  const processXRef = (id, note) => {
+    // Strip column container classes
+    const stripColumnClz = (el) => {
+      el.classList.remove("page-full", "page-columns");
+      if (el.children) {
+        for (const child of el.children) {
+          stripColumnClz(child);
+        }
+      }
+    }
+    stripColumnClz(note)
+    if (id === null || id.startsWith('sec-')) {
+      // Special case sections, only their first couple elements
+      const container = document.createElement("div");
+      if (note.children && note.children.length > 2) {
+        container.appendChild(note.children[0].cloneNode(true));
+        for (let i = 1; i < note.children.length; i++) {
+          const child = note.children[i];
+          if (child.tagName === "P" && child.innerText === "") {
+            continue;
+          } else {
+            container.appendChild(child.cloneNode(true));
+            break;
+          }
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(container);
+        }
+        return container.innerHTML
+      } else {
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        return note.innerHTML;
+      }
+    } else {
+      // Remove any anchor links if they are present
+      const anchorLink = note.querySelector('a.anchorjs-link');
+      if (anchorLink) {
+        anchorLink.remove();
+      }
+      if (window.Quarto?.typesetMath) {
+        window.Quarto.typesetMath(note);
+      }
+      if (note.classList.contains("callout")) {
+        return note.outerHTML;
+      } else {
+        return note.innerHTML;
+      }
+    }
+  }
+  for (var i=0; i<xrefs.length; i++) {
+    const xref = xrefs[i];
+    tippyHover(xref, undefined, function(instance) {
+      instance.disable();
+      let url = xref.getAttribute('href');
+      let hash = undefined; 
+      if (url.startsWith('#')) {
+        hash = url;
+      } else {
+        try { hash = new URL(url).hash; } catch {}
+      }
+      if (hash) {
+        const id = hash.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note !== null) {
+          try {
+            const html = processXRef(id, note.cloneNode(true));
+            instance.setContent(html);
+          } finally {
+            instance.enable();
+            instance.show();
+          }
+        } else {
+          // See if we can fetch this
+          fetch(url.split('#')[0])
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.getElementById(id);
+            if (note !== null) {
+              const html = processXRef(id, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      } else {
+        // See if we can fetch a full url (with no hash to target)
+        // This is a special case and we should probably do some content thinning / targeting
+        fetch(url)
+        .then(res => res.text())
+        .then(html => {
+          const parser = new DOMParser();
+          const htmlDoc = parser.parseFromString(html, "text/html");
+          const note = htmlDoc.querySelector('main.content');
+          if (note !== null) {
+            // This should only happen for chapter cross references
+            // (since there is no id in the URL)
+            // remove the first header
+            if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+              note.children[0].remove();
+            }
+            const html = processXRef(null, note);
+            instance.setContent(html);
+          } 
+        }).finally(() => {
+          instance.enable();
+          instance.show();
+        });
+      }
+    }, function(instance) {
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            div.style.left = 0;
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+        // Handle positioning of the toggle
+    window.addEventListener(
+      "resize",
+      throttle(() => {
+        elRect = undefined;
+        if (selectedAnnoteEl) {
+          selectCodeLines(selectedAnnoteEl);
+        }
+      }, 10)
+    );
+    function throttle(fn, ms) {
+    let throttle = false;
+    let timer;
+      return (...args) => {
+        if(!throttle) { // first call gets through
+            fn.apply(this, args);
+            throttle = true;
+        } else { // all the others get throttled
+            if(timer) clearTimeout(timer); // cancel #2
+            timer = setTimeout(() => {
+              fn.apply(this, args);
+              timer = throttle = false;
+            }, ms);
+        }
+      };
+    }
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

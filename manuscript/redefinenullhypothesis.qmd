@@ -1,0 +1,581 @@
+---
+title: "Redefining the Null Hypothesis: Incorporating Uncertainty to Address the Limitations of Traditional p-values"
+description: |
+  We propose a redefined hypothesis testing framework that incorporates uncertainty into the null hypothesis. By replacing the point null hypothesis with a distributional assumption, we address the well-known problem that arbitrarily small effects can achieve statistical significance with sufficiently large sample sizes. This approach provides a unified framework that naturally incorporates effect size considerations into traditional hypothesis testing.
+categories:
+  - statistics
+keywords:
+  - p-value
+  - effect size
+  - null hypothesis
+  - uncertainty
+  - multiple comparison
+  - hypothesis testing
+  - statistical significance
+  - FWER
+  - FDR
+author:
+  - name: Jinseob Kim
+    url: https://github.com/jinseob2kim
+    affiliation: Zarathu Co.,Ltd
+    affiliation_url: https://www.zarathu.com
+date: 2025-12-24
+bibliography: NewHypoTest.bib
+editor_options:
+  chunk_output_type: console
+format:
+  html:
+    toc: true
+    toc-depth: 3
+  pdf:
+    documentclass: article
+    geometry: margin=1in
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, fig.align = "center", message = FALSE, warning = FALSE,
+                      cache = FALSE, dpi = 300, fig.width = 8, fig.height = 5)
+library(knitr)
+library(reshape2)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(scales)
+library(data.table)
+
+# Set theme
+theme_set(theme_bw(base_size = 12))
+
+reverselog_trans <- function(base = exp(1)) {
+    trans <- function(x) -log(x, base)
+    inv <- function(x) base^(-x)
+    trans_new(paste0("reverselog-", format(base)), trans, inv,
+              log_breaks(base = base),
+              domain = c(1e-100, Inf))
+}
+```
+
+## Abstract
+
+The $p$-value, widely used in statistical hypothesis testing, suffers from a fundamental limitation: with sufficiently large sample sizes, even trivially small effects can achieve statistical significance. This problem arises because most studies employ an unrealistic null hypothesis that the true effect is exactly zero. If the true difference is even 0.0000001—anything other than precisely zero—increasing the sample size will eventually yield $p < 0.05$. However, no one genuinely believes the true effect is exactly zero, and refuting a claim that no one makes provides little scientific value.
+
+In this study, we propose a redefined hypothesis testing framework that incorporates uncertainty into the null hypothesis. The resulting $p_{c\sigma}$-value integrates both traditional $p$-values and effect sizes by shrinking test statistics (e.g., $z,t$) by a factor of $\tfrac{1}{\sqrt{1+nc^2}}$, thereby preventing trivially small differences from being interpreted as statistically significant. Furthermore, we reinterpret the increase in the number of hypotheses in multiple comparisons as an increase in uncertainty for each hypothesis. This uncertainty-control perspective adjusts the null-interval itself via $c_m = c\,m^b$, rather than altering $\alpha$, yielding an effect-size–aware and sample-size–adaptive control that complements FWER/FDR. We demonstrate that this framework overcomes key shortcomings of traditional methods and provides a more realistic basis for statistical inference. Consequently, the minimum detectable effect is $\mathrm{MDE}(n)=z_{1-\alpha/2}\,\sqrt{\tfrac{1}{n}+c^2}$, which converges to $z_{1-\alpha/2}\,c$ as $n\to\infty$. (This work was originally conceived in 2017 and first publicly documented on November 8, 2018 at https://blog.zarathu.com/posts/2018-11-08-redefinenullhypothesis/) 
+
+## Introduction
+
+Statistical hypothesis testing is an essential tool for making scientific claims across natural sciences—including physics, biology, and medicine—as well as social sciences such as economics and psychology[@anderson2000null]. The null hypothesis, first introduced by R.A. Fisher, serves as the hypothesis to be refuted; by demonstrating that events with low probability under this hypothesis have occurred, researchers argue that the hypothesis is false—a logic similar to proof by contradiction in mathematics[@2528399]. The $p$-value quantifies this probability, where the conventional threshold of $p < 0.05$ indicates that the probability of observing results as extreme as or more extreme than the data is less than 5% under the null hypothesis[@ronald2016asa].
+
+The threshold of $p < 0.05$ has long served as the gold standard for scientific discovery. However, criticisms of this practice have been persistent, culminating in recent proposals to lower the significance threshold from 0.05 to 0.005[@jama20181536;@anderson2000null;@Benjamin2018;@ronald2016asa]. Nevertheless, merely lowering the significance level while retaining the traditional $p$-value framework represents only a temporary fix that fails to address the fundamental problems we discuss below.
+
+We identify the unrealistic null hypothesis as the root cause of these problems. The philosopher Schopenhauer, in *The Art of Always Being Right*, advised debaters to "reduce your opponent's position to a simple proposition"[@goffey2005art]. Similarly, in hypothesis testing, the null hypothesis must be stated precisely (e.g., $\mu = 0$), as a clear hypothesis is easier to refute. However, such precise null hypotheses do not exist in reality. Does anyone truly believe that a value is exactly zero? Most researchers implicitly acknowledge some degree of uncertainty, and claiming that a hypothesis of zero is false because the measured value is 0.0000001 is hardly convincing. Yet current hypothesis testing methods employ null hypotheses with no uncertainty whatsoever, meaning that no matter how small the difference between the measured value and the hypothesized value, a sufficiently large sample size will eventually yield $p < 0.05$—regardless of how stringent the significance level. For example, in a two-sided $z$-test, the test statistic is $z = \frac{\bar{X} - \mu}{\sigma/\sqrt{n}}$; as long as $\bar{X} - \mu \neq 0$, increasing $n$ can drive the $p$-value arbitrarily close to zero.
+
+This limitation has led to calls for examining effect sizes alongside $p$-values. Effect size, which standardizes the observed difference—typically by dividing by the standard deviation—is already used in sample size calculations[@sullivan2012using]. Establishing a realistic null hypothesis is not only important in itself but is also directly connected to considering effect sizes. However, without a theoretical framework that conceptualizes this connection, incorporating effect sizes into research design remains difficult.
+
+### Related Work
+
+Several approaches have been proposed to address the limitations of traditional null hypothesis significance testing:
+
+**Equivalence Testing and TOST.** The Two One-Sided Tests (TOST) procedure tests whether an effect falls within a pre-specified equivalence bound $[-\delta, \delta]$, effectively asking whether the effect is "practically equivalent to zero" rather than exactly zero[@lakens2017equivalence]. Our approach shares this motivation but implements it through a continuous uncertainty parameter rather than discrete bounds.
+
+**Minimum Effect Testing.** Related to equivalence testing, minimum effect tests evaluate whether an observed effect exceeds some practically meaningful threshold[@murphy2014statistical]. Our framework naturally incorporates this concept through the uncertainty parameter $\tau$.
+
+**Second-Generation p-values.** Blume et al. proposed second-generation $p$-values (SGPVs) that incorporate a null interval rather than a point null[@blume2018second]. Our approach is conceptually similar, replacing the point null with a distributional assumption that serves as a continuous analog to the null interval.
+
+**Region of Practical Equivalence (ROPE).** In Bayesian inference, the ROPE defines a range of parameter values considered practically equivalent to the null value[@kruschke2018bayesian]. While our method operates within a frequentist framework, it shares the philosophical motivation of distinguishing between statistical and practical significance.
+
+**Redefining Statistical Significance.** Benjamin et al. proposed lowering the significance threshold to 0.005 to reduce false positive rates[@Benjamin2018]. However, this approach does not address the fundamental issue that any fixed threshold can be overcome with sufficient sample size. Our approach provides a sample-size-adaptive criterion that naturally penalizes trivially small effects.
+
+### Contributions
+
+- Effect-size–integrated p-value. Introducing standardized uncertainty into the null via $\tau=c\sigma$ shrinks Wald statistics by $\tfrac{1}{\sqrt{1+nc^2}}$ so that
+  $z_{c\sigma}=\dfrac{z}{\sqrt{1+nc^2}}$ and $p_{c\sigma}=2\{1-\Phi(|z|/\sqrt{1+nc^2})\}$. This integrates effect size and sample size into a single measure and yields a minimum detectable effect $\mathrm{MDE}(n)=z_{1-\alpha/2}\sqrt{\tfrac{1}{n}+c^2}$ that bounds significance even as $n\to\infty$.
+- Multiple testing as uncertainty control. Instead of adjusting $\alpha$, we expand the null-interval by scaling uncertainty with the number of hypotheses: $c_m=c\,m^b$. This "uncertainty-control" provides an effect-size–aware, sample-size–adaptive alternative that complements FWER/FDR.
+
+Unlike existing approaches that examine $p$-values and effect sizes separately (a "physical" juxtaposition), our framework achieves a "chemical" integration where effect size directly modulates the test statistic. Similarly, rather than partitioning $\alpha$ across hypotheses, we reinterpret multiple testing as an increase in null hypothesis uncertainty—a conceptual shift from "narrowing the door" to "raising the bar."
+
+We first develop the concept with the two-sided $z$-test, then extend it to $t$-tests, regression, and correlation. Finally, we apply uncertainty-control to multiple comparisons and compare its behavior with Bonferroni and FDR.
+
+
+## Basic Concept
+
+### Brief Review of Hypothesis Testing
+
+Consider drawing $n$ samples $X_1, X_2, \ldots, X_n$ from a population with unknown mean and known variance $\sigma^2$, where we wish to test whether the population mean equals $\mu_0$. In the traditional framework, the null hypothesis $H_0$ is set as $\mu = \mu_0$. Under this assumption, by the central limit theorem (for sufficiently large $n$), we have $\bar{X} \sim N(\mu_0, \frac{\sigma^2}{n})$, which yields $(\bar{X} - \mu_0) \sim N(0, \frac{\sigma^2}{n})$. The test statistic is expressed as:
+
+$$ z = \dfrac{\bar{X} - \mu_0}{\sigma/\sqrt{n}} \sim N(0,1)$$
+
+For a two-sided test, we conclude statistical significance at $p < 0.05$ when $|z| > 1.96$. However, as long as $\bar{X} - \mu_0 \neq 0$, increasing $n$ indefinitely will cause $z$ to grow without bound, eventually achieving significance under any $p$-value threshold.
+
+### Null Hypothesis with Uncertainty
+
+We now introduce the concept of uncertainty into the null hypothesis. The formulation $H_0: \mu \sim N(\mu_0, \tau^2)$ expresses that while we believe the population mean is $\mu_0$, we acknowledge uncertainty of magnitude $\tau$. When $\tau = 0$, this reduces to the traditional null hypothesis (Figure @fig-fig1).
+
+**Notation.** Throughout this paper, we use two related uncertainty parameters:
+
+- $\tau$: Uncertainty in the original measurement units (e.g., mmHg for blood pressure)
+- $c$: Standardized uncertainty, defined as $c = \tau/\sigma$, where $\sigma$ is the population standard deviation
+
+The relationship $\tau = c \cdot \sigma$ allows researchers to specify uncertainty either in absolute terms or relative to the natural variability of the measurement. When $\tau=c\sigma$, we denote $p_{\tau}$ by $p_{c\sigma}$ and $z_{\tau}$ by $z_{c\sigma}$ for consistency. 
+
+````{r}
+#| label: fig-fig1
+#| fig.cap: "Null hypothesis with uncertainty: $\\mu_0=0$"
+h=CJ(x=seq(-10,10,by=0.01),tau=c(0.5,1,2,4,8))
+h[,Density:=dnorm(x,sd=tau)]
+ggplot(h,aes(x,Density,colour=factor(tau)))+geom_line(linewidth=0.8)+labs(color=expression(tau))+xlab(expression(mu[0]))+scale_color_brewer(palette="Set1")
+
+````
+
+Previously, the variance of $\bar{X} - \mu_0$ was $\frac{\sigma^2}{n}$. Now, since the population mean $\mu_0$ itself carries uncertainty, the variance of $\bar{X} - \mu_0$ becomes $\frac{\sigma^2}{n} + \tau^2$ rather than simply $\frac{\sigma^2}{n}$. Based on this, we reformulate the test statistic as:
+
+$$z_{\tau} = \dfrac{\bar{X} - \mu_0}{\sqrt{\sigma^2/n + \tau^2}} \sim N(0,1)$$
+
+We define the two-sided $p$-value as $p_{\tau} = 2 \times P(Z \geq |z_{\tau}|)$. Note that $p_0$ equals the traditional $p$-value. Crucially, when $\tau \neq 0$, no matter how large $n$ becomes, we have $|z_{\tau}| < |\frac{\bar{X} - \mu_0}{\tau}|$, meaning that differences smaller than $1.96 \times \tau$ can never achieve $p_{\tau} < 0.05$.
+
+### Interpretation of Uncertainty
+
+The meaning of uncertainty $\tau$ becomes clearer when compared to the population standard deviation $\sigma$. Substituting $\tau = c\sigma$ into $z_{\tau}$ yields:
+
+$$z_{\tau} = z_{c\sigma} = \dfrac{\bar{X} - \mu_0}{\sqrt{\sigma^2/n + c^2\sigma^2}} = \dfrac{\bar{X} - \mu_0}{\sigma/\sqrt{n}} \cdot \dfrac{1}{\sqrt{1 + nc^2}} = \dfrac{z}{\sqrt{1 + nc^2}}$$
+
+This reveals that achieving statistical significance now requires a $z$-value that is $\sqrt{1 + nc^2}$ times larger than under traditional hypothesis testing. Figure @fig-fig2 illustrates the relationship between the traditional $p$-value and $p_{c\sigma}$ computed from $z_{c\sigma}$. 
+
+
+````{r}
+#| label: fig-fig2
+#| fig.cap: "Effect-size–integrated $p_{c\\sigma}$ across uncertainty ($c$) and sample size ($n$): Wald shrinkage by $\\sqrt{1+nc^2}$ prevents trivially small effects from achieving significance"
+CalP2=function(z,n,c){
+  zval= z/sqrt(1+n*c^2)
+  pval= 2*(1-pnorm(abs(zval)))
+  return(pval)
+}
+
+
+
+
+z=seq(0,7,by=0.01)
+#c=c(0, 0.01, 0.02,0.03, 0.05, 0.1, 0.2)
+#n=c(30,((qnorm(1-0.025/10^6)/qnorm(0.975))^2-1)/c^2)
+n=c(25,100,400,10000)
+#c=c(0, sqrt(((qnorm(1-0.025/10)/qnorm(0.975))^2-1)/n))
+c=c(0,0.01,0.05,0.1,0.2)
+
+#n=c(((qnorm(1-0.025/10)/qnorm(0.975))^2-1)/c^2)
+
+## data.table version
+comp= CJ(Z=z, N=n, c=c)
+comp[,p:=CalP2(Z,N,c)]
+setkey(comp,Z,N)
+dd=comp[c==0][comp]
+#dd[,N2:=factor(N,labels=paste("n = ",n,sep=""))]
+
+#dd=merge(comp[c==0],comp,by=c("Z","N"))
+#dd$N2=factor(dd$N,labels=paste("N = ",n,sep=""))
+
+ggplot(dd, aes(p, i.p, color=factor(i.c))) +
+  geom_line(linewidth=0.7) +
+  facet_wrap(~N, ncol=2, labeller = label_bquote(cols=italic(n) ==.(N))) +
+  scale_x_continuous(expression(italic(p)), trans=reverselog_trans(10), breaks=c(0.5,0.05,0.005), limits=c(1,10*10^(-4))) +
+  scale_y_continuous(expression(italic(p)[italic(c)*sigma]), trans=reverselog_trans(10), breaks=c(0.5,0.05,0.005), limits=c(1,10*10^(-4))) +
+  labs(color=expression(italic(c))) +
+  scale_color_brewer(palette="Set1")
+
+
+
+
+
+
+#ggplot(dd,aes(p.x,p.y,color=factor(c.y)))+geom_line()+facet_wrap(~N2, ncol=3)+scale_x_log10(expression(italic(p)),limit=c(10^(-3),1),breaks=10^seq(0,-8,-2),labels = trans_format("log10", math_format(10^.x)))+scale_y_log10(expression(italic(p)[italic(c)][sigma]),limit=c(10^(-3),1),breaks=10^seq(0,-8,-2),labels = trans_format("log10", math_format(10^.x)))+geom_vline(xintercept = 0.05,col="black",lty=2)+geom_hline(yintercept=0.05,col="black",lty=2)+scale_color_discrete(expression(italic(c)))
+````
+
+Expressing $|z_{c\sigma}|$ in terms of effect size $d = |\frac{\bar{X} - \mu_0}{\sigma}|$ yields:
+
+$$|z_{c\sigma}| = \left|\dfrac{\bar{X} - \mu_0}{\sigma}\right| \cdot \dfrac{1}{\sqrt{1/n + c^2}} = \dfrac{d}{\sqrt{1/n + c^2}}$$
+
+This relationship is illustrated in Figure @fig-fig3.
+
+````{r}
+#| label: fig-fig3
+#| fig.cap: "$p_{c\\sigma}$ according to effect size, sample size and uncertainty of null hypothesis"
+CalP=function(es,n,c){
+  zval= es/ sqrt(1/n + c^2)
+  pval= 2*(1-pnorm(abs(zval)))
+  return(pval)
+}
+
+
+n=seq(1,50000,by=2)
+c=c(0, 0.01, 0.05, 0.1, 0.2)
+#n=c(30,((qnorm(1-0.025/10^6)/qnorm(0.975))^2-1)/c^2)
+es= 1.96*c[-1]
+
+#a= expand.grid(es=es, N=n, c=c)
+#a$p=CalP(a$es,a$N,a$c)
+#a$es=factor(paste("Effect size =",a$es),levels= paste("Effect size =",es))
+#a=subset(a,p>=10^(-8))
+
+## data.table version
+a= CJ(d=es, N=n, c=c)
+a[,p:=CalP(d,N,c)]
+#a[,d:=factor(paste("Effect size =",d),levels= paste("Effect size =",es))]
+
+
+ggplot(a[p>=0.001],aes(N,p,color=factor(c)))+geom_line(linewidth=0.7)+facet_wrap(~d, ncol=2,labeller = label_bquote(cols="Effect size" ==.(d)))+scale_y_continuous(expression(italic(p)[italic(c)*sigma]),trans=reverselog_trans(10),breaks=c(0.5,0.05,0.005),limits=c(1,10*10^(-4)))+labs(color=expression(italic(c)))+scale_x_log10(expression(italic(n)),breaks=10^seq(0,4),label=c(1,10,100,1000,10000))+scale_color_brewer(palette="Set1")
+
+#ggplot(a,aes(N,p,color=factor(c)))+geom_line()+facet_wrap(~es, ncol=3)+scale_y_log10(expression(italic(p)[italic(c)][sigma]),limit=c(10^(-8),1),breaks=10^seq(0,-8,-2),labels = trans_format("log10", math_format(10^.x)))+geom_hline(yintercept=0.05,col="black",lty=2)+scale_color_discrete(expression(italic(c)))+xlab(expression(italic(N)))
+  
+````
+
+If $d \leq 1.96 \times c$, then:
+
+$$|z_{c\sigma}| = \dfrac{d}{\sqrt{1/n + c^2}} < \dfrac{d}{c} \leq \dfrac{1.96 \times c}{c} = 1.96$$
+
+This means that no matter how large the sample size $n$, we cannot achieve $p_{c\sigma} < 0.05$. Researchers can leverage this property by adjusting $c$ to prevent effect sizes they consider too small from achieving significance. For example, setting $c = 0.01$ (i.e., uncertainty of 1% relative to the population standard deviation) prevents effects with $d \leq 0.0196$ from ever reaching statistical significance.
+
+When $n$ is small, 1% uncertainty has minimal impact on the traditional $p$-value. However, at $n = 10{,}000$, this effectively strengthens the significance threshold to approximately 0.005 (Figure 2). This property provides a natural, sample-size-adaptive penalty that becomes more stringent as sample sizes grow large enough to detect trivially small effects.
+
+### Sample Size Calculation
+
+Incorporating uncertainty also changes the required sample size. We first express the traditional two-sided $z$-test sample size formula in terms of standard error ($\alpha$: Type I error rate, $\beta$: Type II error rate)[@noordzij2011sample]:
+
+$$
+\begin{aligned}
+n &= (\dfrac{Z_{1-\alpha/2} + Z_{1-\beta}}{(\mu-\mu_0)/\sigma})^2 \\
+\dfrac{n}{\sigma^2} &= (\dfrac{Z_{1-\alpha/2} + Z_{1-\beta}}{\mu-\mu_0})^2 \\
+\dfrac{1}{\sigma^2\cdot(1/n)} &= (\dfrac{Z_{1-\alpha/2} + Z_{1-\beta}}{\mu-\mu_0})^2 
+\end{aligned}
+$$
+
+To incorporate the uncertainty parameter $c$, we add $c^2\sigma^2$ to the denominator on the left-hand side. The new sample size formula becomes: 
+
+$$ 
+\begin{aligned}
+\dfrac{1}{\sigma^2\cdot(1/n_{c\sigma}+c^2)} &= (\dfrac{Z_{1-\alpha/2} + Z_{1-\beta}}{\mu-\mu_0})^2 \\
+\dfrac{1}{n_{c\sigma}} &= (\dfrac{(\mu-\mu_0)/\sigma}{Z_{1-\alpha/2} + Z_{1-\beta}})^2 -c^2 \\
+               &= \dfrac{1}{n}-c^2 \\
+n_{c\sigma} &= \dfrac{1}{1/n-c^2}
+\end{aligned}
+$$
+
+Consequently, if $\frac{1}{n} - c^2 \leq 0$—that is, if the traditional hypothesis testing approach already required a sample size of $1/c^2$ or more—then no amount of additional samples can control Type I and Type II errors under uncertainty-adjusted testing. Figure @fig-fig4 illustrates the relationship between effect size and required sample size for $\alpha = 0.05$ and power $1 - \beta = 0.8$. When uncertainty exists, effects below a certain threshold cannot be detected regardless of sample size. 
+
+
+````{r}
+#| label: fig-fig4
+#| fig.cap: "Required sample size according effect size in some uncertainty scenarios: $\\alpha=0.05$, $1-\\beta=0.8$ "
+
+SampleNew=function(es,c,alpha=0.05,beta=0.2){
+  n= ((qnorm(1-alpha/2)+qnorm(1-beta))/es)^2
+  coef= (1/n-c^2)
+  out=ifelse(coef<=0,NA,1/coef)
+  return(out)
+}
+
+
+sn= CJ(d=seq(0.01,1.05,by=0.001), c=c(0, 0.01, 0.05, 0.1,0.2 ))
+sn[,N:=SampleNew(d,c)]
+
+brk= round((qnorm(0.975)+qnorm(0.8)) *c( 0.01,0.025, 0.05, 0.1,0.2 ),2)
+
+ggplot(sn[N<=0.6*10^5], aes(d,N,colour=factor(c)))+geom_line(linewidth=0.8)+labs(color=expression(italic(c))) +scale_y_log10("Required sample size",breaks=c(1,10,100,1000,10000))+scale_x_log10("Effect size",breaks=c(0.01,0.03,0.1,0.14,0.28,0.56,1))+scale_color_brewer(palette="Set1")
+
+````
+
+## Extension to Other Statistics
+
+We now extend the logic of $z_{c\sigma}$ to other test statistics.
+
+### One-Sample and Paired $t$-tests
+
+The null hypothesis for a one-sample $t$-test is identical to that of the $z$-test above. Replacing the population variance $\sigma^2$ with the sample variance $s^2$, the statistic follows a $t$-distribution with $n-1$ degrees of freedom[@kim2015t]. Adding uncertainty of magnitude $cs$ to the null hypothesis yields:
+
+$$t_{cs} = \dfrac{\bar{X} - \mu_0}{\sqrt{s^2/n + c^2s^2}} = \dfrac{\bar{X} - \mu_0}{s/\sqrt{n}} \cdot \dfrac{1}{\sqrt{1 + nc^2}} = \dfrac{t}{\sqrt{1 + nc^2}}$$
+
+For paired $t$-tests, the same formula applies with $\bar{X}$ replaced by the mean difference $\bar{d}$ and $s$ replaced by the standard deviation of differences $s_d$.
+
+### Independent Two-Sample $t$-test
+
+When comparing means of two independent groups (assuming equal variances), the null hypothesis takes the form $H_0: \mu_1 - \mu_2 = 0$, with the test statistic[@kim2015t]:
+
+$$t = \dfrac{\bar{X}_1 - \bar{X}_2}{\sqrt{s_p^2\left(\frac{1}{n_1} + \frac{1}{n_2}\right)}}$$
+
+where $s_p$ is the pooled variance and $n_1, n_2$ are the sample sizes of groups 1 and 2, respectively.
+
+This $t$-value follows a $t$-distribution with $n_1 + n_2 - 2$ degrees of freedom. Adding uncertainty of $c$ times $s_p$ to the null hypothesis $H_0: \mu_1 - \mu_2 = 0$ yields:
+
+$$t_{cs_p} = \dfrac{\bar{X}_1 - \bar{X}_2}{\sqrt{s_p^2\left(\frac{1}{n_1} + \frac{1}{n_2}\right) + c^2s_p^2}} = \dfrac{\bar{X}_1 - \bar{X}_2}{\sqrt{s_p^2\left(\frac{1}{n_1} + \frac{1}{n_2}\right)}} \cdot \dfrac{1}{\sqrt{1 + \frac{n_1n_2}{n_1 + n_2}c^2}} = \dfrac{t}{\sqrt{1 + \frac{n_1n_2}{n_1 + n_2}c^2}}$$
+
+
+### Regression Coefficients
+
+In a simple linear regression $Y = \beta_0 + \beta_1 X_1$, the following statistic for testing $H_0: \beta_1 = 0$ follows a $t$-distribution with $n-2$ degrees of freedom[@Altman2015]:
+
+$$t = \dfrac{\hat{\beta}_1}{se(\hat{\beta}_1)} = \dfrac{\hat{\beta}_1}{\hat\sigma_{\varepsilon} / \sqrt{\sum\limits_{i=1}^n (X_{1i} - \bar{X}_1)^2}} = \dfrac{\hat{\beta}_1}{\hat\sigma_{\varepsilon}/s_{x_1}} \cdot \frac{1}{\sqrt{1/n}}$$
+
+where $\hat\sigma_{\varepsilon}$ is the mean squared error (MSE) and $s_{x_1}$ is the standard deviation of $X_1$.
+
+Adding uncertainty of $c$ times $\frac{\hat\sigma_{\varepsilon}}{s_{x_1}}$ to the null hypothesis yields:
+
+$$t_{c\hat\sigma_{\varepsilon}/s_{x_1}} = \dfrac{\hat{\beta}_1}{\hat\sigma_{\varepsilon}/s_{x_1}} \cdot \frac{1}{\sqrt{1/n + c^2}} = \left(\dfrac{\hat{\beta}_1}{\hat\sigma_{\varepsilon}/s_{x_1}} \cdot \frac{1}{\sqrt{1/n}}\right) \cdot \dfrac{1}{\sqrt{1 + nc^2}} = \dfrac{t}{\sqrt{1 + nc^2}}$$
+
+For the general linear model with predictors $X_1, X_2, \ldots, X_p$, expressed in matrix form as $\mathbf{Y} = \mathbf{X\beta}$, testing $\beta_i = 0$ uses the $(i+1)$-th diagonal element $g_{ii}$ of $(\mathbf{X'X})^{-1}$ instead of $\frac{1}{\sum_{i=1}^n (X_{1i} - \bar{X}_1)^2}$, with $n - p - 1$ degrees of freedom[@alexopoulos2010introduction]. Defining the uncertainty-adjusted statistic as $\frac{t}{\sqrt{1 + nc^2}}$ naturally extends the simple linear model case.
+
+For generalized linear models (GLMs), where $Y$ may not follow a normal distribution, the Wald statistic $z = \frac{\hat{\beta}_i}{se(\hat{\beta}_i)}$ asymptotically follows a normal distribution[@nelder1972generalized;@wedderburn1974quasi]. Defining the uncertainty-adjusted statistic as $\frac{z}{\sqrt{1 + nc^2}}$ maintains consistency with the linear model framework.   
+
+
+### Correlation Coefficients
+
+The Pearson correlation coefficient ($r$) between two variables $X$ and $Y$ is commonly tested using the following statistic:
+
+$$t = \dfrac{r\sqrt{n-2}}{\sqrt{1-r^2}}$$
+
+This follows a $t$-distribution with $n-2$ degrees of freedom and is numerically identical to $\frac{\hat{\beta}_1}{se(\hat{\beta}_1)}$ from simple linear regression. Therefore, defining the uncertainty-adjusted statistic as $\frac{t}{\sqrt{1 + nc^2}}$ maintains consistency. This can be interpreted as adding uncertainty of $c$ times $\frac{n}{n-2}$ when testing $H_0: r' = \frac{r}{\sqrt{1-r^2}} = 0$.
+
+### Note on Effective Sample Size
+
+In regression models with $p$ predictors, one may use the effective sample size $n_{\text{eff}} = n - p - 1$ (residual degrees of freedom) instead of $n$. For most practical purposes with moderate $p/n$ ratios, using $n$ directly yields similar results. The shrinkage principle also extends naturally to the Welch t-test for unequal variances, where $n_{\text{eff}}$ is computed from the Welch-Satterthwaite approximation.
+
+### General Formulation
+
+For any Wald-type statistic $W$ (z, t, or chi-square), the uncertainty-adjusted statistic and p-value are:
+$$W_{c} = \frac{W}{\sqrt{1 + n_{\text{eff}} c^2}}, \quad p_{c\sigma} = 2\left(1 - F_{W}(|W_c|)\right)$$
+
+where $F_W$ is the appropriate reference distribution (normal, t, or chi-square).
+
+### Connection to Confidence Intervals
+
+The criterion $|z_{c\sigma}| > z_{1-\alpha/2}$ is equivalent to requiring that the $(1-\alpha)$ confidence interval for the effect lies entirely outside the expanded null interval $[-1.96 c\sigma, +1.96 c\sigma]$. This provides an intuitive bridge to TOST and SGPV, which also rely on interval-based reasoning.
+
+
+## A New Approach for Multiple Comparisons: Uncertainty Control
+
+Finally, we propose "uncertainty control" as a novel approach to the multiple comparison problem by adjusting the uncertainty of null hypotheses.
+
+### Definition of Uncertainty Control
+
+When testing multiple null hypotheses simultaneously, applying the original significance level to each test inflates the false positive rate. If the significance level for each hypothesis is $\alpha$, the probability of obtaining at least one false positive among $m$ hypotheses is approximately $1 - (1-\alpha)^m \approx m\alpha$—roughly $m$ times the original false positive rate. The most common solution is family-wise error rate (FWER) control, with Bonferroni correction being the standard approach. Under Bonferroni correction, the significance level for each of $m$ hypotheses is reduced to $\alpha_m = \frac{\alpha}{m}$, controlling the family-wise error rate at or below $\alpha$[@armstrong2014use]:
+
+$$-\log\alpha_m = -\log\alpha + \log m$$
+
+Alternatively, we can view testing multiple null hypotheses simultaneously as increasing the uncertainty associated with each hypothesis. Genome-Wide Association Studies (GWAS) provide a canonical example: researchers test associations between genetic variants and diseases without prior information about which genes might be relevant, examining each variant individually. The significance threshold is typically set at $5 \times 10^{-8}$, corresponding to Bonferroni correction for approximately one million simultaneous tests[@jannot2015p]. Yet even without prior information about disease associations, does anyone truly believe that every genetic effect is exactly zero? It is more natural to assume that uncertainty about each null hypothesis increases as the number of hypotheses grows.
+
+We define the uncertainty $c_m$ for $m$ hypotheses as:
+
+$$\log c_m = \log c + b \cdot \log m$$
+
+This formulation parallels Bonferroni correction, adding a penalty proportional to $\log m$ to the original uncertainty $c$ (on the log scale). Effect sizes smaller than $1.96 \times c_m$ cannot achieve statistical significance regardless of sample size. Researchers can adjust $c$ to set the initial uncertainty and the constant $b$ to control the degree of uncertainty scaling. We set $b = 0.069$ so that at $m = 10^6$ and $n = 10{,}000$, uncertainty-control delivers approximately the same stringency as Bonferroni correction (Figure @fig-fig5). This calibration corresponds to a typical Genome-Wide Association Study (GWAS) scenario; for other contexts, $b$ can be recalibrated accordingly.  
+
+````{r}
+#| label: fig-fig5
+#| fig.cap: "Multiple testing via uncertainty-control ($c_m=c\\,m^b$) vs Bonferroni: required $p$-values ($p_{\\text{req}}$) by number of hypotheses ($m$) and sample size ($n$); $b=0.069$, $c=0.01$"
+CalP2=function(z,n,c){
+  zval= z/sqrt(1+n*c^2)
+  pval= 2*(1-pnorm(abs(zval)))
+  return(pval)
+}
+
+nt=10^seq(0,6,by=0.01)
+n=c(1500,3000,5000,10000)  
+bf2=CJ(nt=nt, N=n)
+cfun=function(base, m, b){
+  log_c = log10(base) + b*log10(m)
+  return(10^log_c)
+}
+
+
+
+bf2[, ":="(FWER = qnorm(1-0.025/nt),
+            Uncertainty = qnorm(1-0.025) * sqrt(1 + N * cfun(0.01, nt, 0.069)^2))]
+setnames(bf2,"FWER","Bonferroni correction")
+
+bf3=melt(bf2,measure.vars = 3:4,value.name = "zcut")
+bf3[variable=="Uncertainty",variable:=paste(variable," (n= ",N,")",sep="")]
+
+#ggplot(bf4,aes(nt,zcut,colour=variable))+geom_line()+scale_x_log10(expression(italic(m)),breaks=10^seq(0,6),labels = trans_format("log10", math_format(10^.x)))+ylab(expression(italic(z)[req]))
+
+bf3[,pcut:=2*(1-pnorm(zcut))]
+bf3[,variable:=factor(variable)]
+setnames(bf3,"variable","Control") 
+
+ggplot(bf3,aes(nt,pcut,colour=Control))+geom_line(linewidth=0.7)+scale_x_log10(expression(italic(m)),breaks=10^seq(0,6),labels = trans_format("log10", math_format(10^.x)))+scale_y_continuous(expression(italic(p)[req]),trans=reverselog_trans(10),breaks=5*10^seq(-2,-8),limits=c(0.05,5e-8))+theme(legend.position="bottom")+guides(color=guide_legend(nrow=2)) 
+
+````
+
+As shown in Figure @fig-fig5, uncertainty control, like Bonferroni correction, strengthens the $p$-value threshold as $m$ increases. The key difference is that the degree of stringency depends on sample size. At $m = 10^6$: for $n = 1{,}500$, the threshold is $5.46 \times 10^{-3}$; for $n = 3{,}000$, it is $6.61 \times 10^{-4}$; for $n = 5{,}000$, it is $4.22 \times 10^{-5}$. At $n = 10{,}000$, the threshold becomes $5.06 \times 10^{-8}$, comparable to Bonferroni correction.
+
+We can look at the change in significance levels in terms of the effect size. Unlike the Bonferroni correction, the degree of significance correction can be changed by the effect sizes even if they have the same $p_{c_{m\sigma}}$-values of the Uncertainty control (Figure @fig-fig6). 
+
+````{r}
+#| label: fig-fig6
+#| fig.cap: "Effect-size sensitivity under uncertainty-control: $p_{c_{m}\\sigma}$ by number of hypotheses ($m$) and effect size ($d$)"
+cfun=function(base=0.01, m, b){
+  log_c = log10(base) + b*log10(m)
+  return(10^log_c)
+}
+
+nt=10^seq(0,6,by=0.01)
+d= c(0.05,0.07,0.1,0.2,0.5)
+#n=1/((d/pnorm(1-0.025/10^6))^2-0.01^2)
+
+
+#n=c(1500,3000,5000,10000) 
+uc= CJ(m=nt, d=d)
+uc[, N := 1/((d/qnorm(1-0.025/10^1))^2 - 0.01^2)]
+uc[, z := d / sqrt(1/N + cfun(0.01, m, 0.069)^2)]
+uc[, p := 2 * (1 - pnorm(abs(z)))]
+
+ggplot(uc, aes(m,p,colour=factor(d)))+ geom_line(linewidth=0.7)+scale_x_log10("Number of hypotheses",breaks=10^seq(0,6),labels = trans_format("log10", math_format(10^.x))) +scale_y_continuous(expression(italic(p)), trans=reverselog_trans(10),breaks=5*10^seq(-1,-8)) +labs(color=expression(italic(d)))+scale_color_brewer(palette="Set1")
+````
+
+In Figure @fig-fig6, when applying $c=0.01$ and $b=0.069$, the result with an effect size of $0.5$ and $p_{c_{m\sigma}}=5\times 10^{-5}$ is hardly affected by the increase in the number of hypotheses; however, the result with an effect size of $0.05$ cannot gain significance when the number of hypotheses increases to $10^6$ even if the initial $p_{c_{m\sigma}}$-value is the same as above.  
+
+````{r}
+#| label: fig-supp
+#| fig.cap: "Number of hypotheses($m$) and minimum detectable effect size($1.96\\times c_m$, log scale) by constant $b=$ & uncertainty($c=0.01$)"
+#| eval: false
+cfun=function(base=0.01, m, b){
+  log_c = log10(base) + b*log10(m)
+  return(10^log_c)
+}
+nt=10^seq(0,6,by=0.01)
+b = 0.069
+n=c(1500,3000,5000,10000)  
+uc = CJ(m = nt, b=b, N=n)
+uc[, min_des := qnorm(0.975) * cfun(0.01, m, b)]
+
+
+ggplot(uc, aes(m,min_des,colour=factor(b)))+ geom_line()+scale_x_log10("Number of hypotheses",breaks=10^seq(0,6),labels = trans_format("log10", math_format(10^.x))) +scale_y_continuous("Minimum detectable effect size", trans=log_trans(10), breaks= seq(0,0.1,by=0.02)) +scale_color_discrete(expression(italic(b)))
+````
+ 
+
+### Simulation Scenarios: Comparison with Bonferroni Correction and FDR Control
+
+We compare uncertainty control with commonly used multiple comparison methods—Bonferroni correction and FDR control—through several scenarios[@benjamini1995controlling]. Consider $10^6$ null hypotheses, of which 1% (i.e., 10,000) are truly non-null with effect size $d$. Statistical significance depends on $d$, sample size $n$, and the multiple comparison method. Table 1 summarizes both theoretical results and simulation results. FWER and FDR control thresholds are both set at 0.05, with FDR control implemented using the Benjamini-Hochberg procedure[@benjamini1995controlling]. 
+
+
+````{r,fig.height=4}
+library(parallel)
+## Functions
+psimul=function(nsam,nt,a,es){
+  #clog=0.01*sqrt(1+log10(nt))
+  clog = cfun(0.01,nt,0.069)
+  d=c(rnorm(nt*(1-a)),rnorm(nt*a,mean=es*sqrt(nsam)))
+  tr = c(rep("Null",nt*(1-a)), rep("True", nt*a))
+  res=data.table(d, tr)
+  res[,p_bon := p.adjust(2*(1-pnorm(abs(d))), method="bonferroni")]
+  res[,p_fdr := p.adjust(2*(1-pnorm(abs(d))), method="fdr")]
+  res[,p_un  := 2*(1-pnorm(abs(d)/sqrt(1+nsam*clog^2)))]
+  
+  out = res[, lapply(.SD, function(x){sum(x<=0.05)}), .SDcols= 3:5, by= tr]
+  out.unlist = c(es,nsam,unlist(list(out[,2], out[,3],out[,4])))
+  names(out.unlist) =c("d","Sample size", paste(rep(c("Bonferroni", "FDR", "Uncertainty"),each=2),": ", rep(c("False (+)","True (+)"),3),sep=""))
+  return(out.unlist)
+}
+
+p_fdr=function(pcut,a,nsam,es){
+  p_al_k = (1-pnorm(qnorm(1-pcut/2) - es*sqrt(nsam))) +pnorm(qnorm(pcut/2) - es*sqrt(nsam)) 
+  fdr.val= (1-a)*pcut/((1-a)*pcut + a*p_al_k)
+  p_fdr= (1-a)*pcut + a*p_al_k
+  return(c(fdr.val,p_fdr))
+}
+
+pexact=function(nsam,nt,a,es){
+  clog = cfun(0.01,nt,0.069)
+  p_al = (1-pnorm(qnorm(1-0.025/nt) - es*sqrt(nsam))) +pnorm(qnorm(0.025/nt) - es*sqrt(nsam)) 
+  p_bon = c((1-a)*0.05/nt, a*p_al)
+  #p_bon = c((1-a)*0.05/nt, a* (1-pnorm(qnorm(1-0.05/nt) - es*sqrt(nsam))))
+  
+  opfun = function(p){(p_fdr(p,a,nsam,es)[1]-0.05)^2}
+  p_cut = optim(0.001, opfun)$par
+  #p_fd = p_fdr(p_cut, a, nsam, es)[2]
+  p_al_k = (1-pnorm(qnorm(1-p_cut/2) - es*sqrt(nsam))) +pnorm(qnorm(p_cut/2) - es*sqrt(nsam)) 
+  p_fd= c((1-a)*p_cut, a*p_al_k)
+  #p_fd= c((1-a)*p_cut, a* (1-pnorm(qnorm(1-p_cut) - es*sqrt(nsam))))
+  
+  #pcuts=5*10^{seq(-8,-2,by=0.0001)}
+  #fdrdata=data.table(cbind(pcuts,t(sapply(pcuts,function(x){p_fdr(x,a,nsam,es)}))))
+  #p_fdrs=fdrdata[V2<=0.05,V3]
+  #p_fdr=ifelse(length(p_fdrs)==0,0,max(p_fdrs))
+  
+  z_al= c(qnorm(1-0.025)*sqrt(1+nsam*clog^2) - es*sqrt(nsam), qnorm(0.025)*sqrt(1+nsam*clog^2) - es*sqrt(nsam))
+  p_un = c( (1-a)*2*(1-pnorm(qnorm(0.975)*sqrt(1+nsam*clog^2))), a*(1-pnorm(z_al[1])+pnorm(z_al[2])) )
+  #p_un = c( (1-a)*(1-pnorm(qnorm(0.95)*sqrt(1+nsam*clog^2))), a*(1-pnorm(qnorm(1-0.05)*sqrt(1+nsam*clog^2) - es*sqrt(nsam))) )
+  
+  out = c(es,nsam,round(c(p_bon, p_fd ,p_un)*nt))
+  names(out) = c("d","Sample size", paste(rep(c("Bonferroni", "FDR", "Uncertainty"),each=2),": ", rep(c("False (+)","True (+)"),3),sep=""))
+  #names(out) = c("d","Sample size",  rep(c("False (+)","True (+)"),3))
+  return(out)
+}
+
+## Table
+nt=10^6
+#p= 5*10^seq(-4,-8)
+es= c(0.01 * seq(2,10,by=2))
+n=c(2000,3000,4000,5000,10000)
+a=0.01
+vars=CJ(nt=nt,a=a,es=es,n=n)
+#vars[,z:=qnorm(1-p/2)]
+#vars[,n:= (z/es)^2]
+
+
+
+
+res.theory=t(mcmapply(pexact,vars$n,vars$nt,vars$a,vars$es))
+zz=data.table(res.theory)[order(`Sample size`)]
+#names(res.theory)= c("p","d","n","Bonferroni(null)","Bonferroni(eff)","FDR(null)","FDR(eff)","Uncertainty control(null)", "Uncertainty control(eff)")
+kable(zz[,c(2,1,3:8)],align="c",caption="The number of false positive/negative results among $10^6$ hypotheses(1% true) with some scenarios")
+
+#kable(zz[,c(2,1,3:8)],align="c",caption="The number of false positive/negative results among $10^6$ hypotheses(1% true) with some scenarios",format="html") %>%
+#  kable_styling(bootstrap_options = "striped",full_width = F) %>%
+#   add_header_above(c(" "=2, "Bonferroni correction" = 2, "FDR control[note]" = 2,"Uncertainty control" = 2))
+
+
+#names(res.theory)= c("p","d","n","Bonferroni correction","FDR control","Uncertainty control(null)", "Uncertainty control(eff)")
+#res.simul=t(mcmapply(psimul,vars$n,vars$nt,vars$a,vars$es))
+#names(res.theory)=names(res.simul)=c("p","d","n","Bonferroni correction","FDR control","Uncertainty control")
+
+#library(DT)
+#datatable(res.theory,option=list(pageLength = 25,lengthMenu = c(10, 20, 50, 100,200)),rownames = F, caption="Number of statisitical significant test among $10^6$ hypotheses(1% true) with some scenarios: theoritical results")
+#datatable(res.simul,option=list(pageLength = 25,lengthMenu = c(10, 20, 50, 100,200)),rownames=F)
+
+#kable(res.theory,align="c",caption="Number of statisitical significant test among $10^6$ hypotheses(1% true) with some scenarios: theoritical results")
+#kable(res.simul,align="c",caption="Number of statisitical significant test among $10^6$ hypotheses(1% true) with some scenarios: simulational results")
+#res.theory.sum = cbind(res.theory[,1:3], res.theory[,4]+res.theory[,5], res.theory[,6]+res.theory[,7], res.theory[,8]+res.theory[,9]) 
+#res.melt= melt(res.theory.sum,measure.vars = 4:6, variable.name = "Correction", value.name = "nsig")
+#ggplot(res.melt,aes(d,nsig,color=factor(p)))+ geom_line() + facet_grid(~Correction) +ylab("Number of significant results") + xlab(expression(italic(d))) +scale_color_discrete(expression(paste("Original  ",italic(p))))
+ 
+````
+
+## Discussion
+
+### Distinction from Bayesian Approaches
+
+It is important to clarify that our uncertainty parameter $\tau$ is not a Bayesian prior. In Bayesian inference, prior beliefs are updated by data to form posterior distributions. Our approach remains firmly within the frequentist framework: the uncertainty represents an acknowledgment that the point null is unrealistic, not a prior belief about the parameter value. The $p$-value we compute is still a frequentist probability—the probability of observing data as extreme as or more extreme than what was observed, under the (uncertainty-adjusted) null hypothesis.
+
+### Advantages of the Proposed Framework
+
+1. **Unified framework:** Effect size and statistical significance are integrated into a single measure, eliminating the need to examine them separately.
+
+2. **Sample-size adaptation:** Unlike fixed significance thresholds, our method naturally becomes more stringent as sample sizes grow large enough to detect trivially small effects.
+
+3. **Transparency:** Researchers must explicitly specify their uncertainty parameter $c$, forcing consideration of what effect sizes are practically meaningful.
+
+4. **Compatibility:** The framework extends naturally to all Wald-type statistics ($t$-tests, regression coefficients, etc.) and multiple testing scenarios.
+
+### Limitations
+
+1. **Parameter selection:** The choice of $c$ requires domain expertise and may be debated. We recommend sensitivity analyses across plausible $c$ values.
+
+2. **Not a complete solution:** This method addresses one limitation of $p$-values (sensitivity to sample size for trivial effects) but does not solve all problems with null hypothesis significance testing.
+
+3. **Clustered/dependent data:** When observations are not independent (e.g., repeated measures, hierarchical data), the effective sample size differs from the total number of observations. For GEE or mixed models, consider using the number of independent clusters or an appropriate effective sample size rather than total $n$.
+
+## Conclusion
+
+We have presented a redefined hypothesis testing framework that incorporates uncertainty into the null hypothesis. By acknowledging that point null hypotheses are unrealistic, our method provides effect-size-integrated $p$-values that prevent trivially small differences from achieving statistical significance. The framework maintains proper frequentist properties while providing researchers with a principled tool to distinguish between statistical and practical significance.
+
+The minimum detectable effect $\text{MDE}(n) = z_{1-\alpha/2}\sqrt{1/n + c^2}$ provides a natural floor on detectable effects, and the extension to multiple testing through uncertainty control ($c_m = c \cdot m^b$) offers an effect-size-aware alternative to traditional FWER/FDR methods.
+
+We encourage researchers to adopt this framework alongside traditional analyses, particularly in large-sample studies where the distinction between statistical and practical significance is most critical.
+
+## References
